@@ -1,0 +1,182 @@
+﻿@model LoglarViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bağış Listesi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/deneme.css" />
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        .btn-geri {
+            padding: 6px 10px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+            .btn-geri:hover {
+                background: #1e40af;
+            }
+    </style>
+
+</head>
+
+<body class="readonly-page">
+
+    <div class="main-wrapper">
+        <header class="top-bar">
+            <h1 class="page-title">Kurban Bağışları</h1>
+            <div class="search-section">
+                <input type="text" id="tableSearch" placeholder="Tabloda ara..." />
+                <span class="badge-total">Toplam: @Model.BagisBilgileris.GroupBy(x => x.BagislarId).Count()</span>
+            </div>
+        </header>
+
+        <div class="table-card">
+            <div class="table-responsive">
+                <table id="mainTable">
+                    <thead>
+                        <tr>
+                            <th class="col-no">No</th>
+                            <th>Tarih</th>
+                            @foreach (var sutun in Model.RefSutunlar)
+                            {
+                                <th>@sutun.Aciklama</th>
+                            }
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var sayac = 1;
+                            var tumVeriler = Model.BagisBilgileris.ToList();
+                        }
+                       @for (int i = 0; i < tumVeriler.Count(); i++)
+    
+                        {
+                            if (tumVeriler[i].SutunlarId == 1)
+                            {
+                            <tr>
+                                    <td class="col-no">@sayac</td>
+                                    
+
+                                    <td>@Model.Tarihs[sayac-1]</td>
+                                    @{
+                                        sayac++;
+                                    }
+                                    @foreach (var sutunTanimi in Model.RefSutunlar)
+                                    {
+                                        // Mevcut i indeksinden ileriye doğru bak, bu satıra ait doğru sütunu bul
+                                        // (Yani bu bloktaki 1, 2, 3... 7 nolu verileri yan yana diziyoruz)
+                                        var hucre = tumVeriler.Skip(i).Take(Model.RefSutunlar.Count())
+                                        .FirstOrDefault(x => x.SutunlarId == sutunTanimi.Id);
+
+                                        var val = hucre?.Aciklama ?? "";
+
+                                        <td>
+                                            @if (sutunTanimi.Id == 5)
+                                            {
+                                                var valDisplay = val == "4" ? "Teslim Edildi" : val == "3" ? "Dernekte" : val == "2" ? "Referans'ta" : "Alınmadı";
+                                                var cls = val == "4" ? "success" : val == "3" ? "info" : val == "2" ? "warning" : "danger";
+                                                <span class="status-pill @cls">@valDisplay</span>
+                                            }
+                                            else if (sutunTanimi.Id == 6)
+                                            {
+                                                <span class="sms-status @(val == "1" ? "sent" : "pending")">
+                                                    @(val == "1" ? "Gönderildi" : "Gönderilmedi")
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                @val
+                                            }
+                                        </td>
+                                       
+                                }
+                                    <td>
+                                        @{
+                                            // O satıra ait olan tüm hücre verilerini alıyoruz
+                                            var satirinTumVerileri = tumVeriler.Skip(i).Take(Model.RefSutunlar.Count()).ToList();
+
+                                            // Bu listeyi JavaScript'in anlayacağı bir JSON stringine çeviriyoruz
+                                            var jsonVeri = System.Text.Json.JsonSerializer.Serialize(satirinTumVerileri.Select(x => new
+                                            {
+                                                SutunlarId = x.SutunlarId,
+                                                Aciklama = x.Aciklama,
+                                                BagislarId = x.BagislarId
+                                            }));
+                                        }
+                                        <button class="btn-geri" onclick='geriDon(@Html.Raw(jsonVeri))'>
+                                            Geri Dön
+                                        </button>
+                                    </td>
+                            </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/js/deneme.js"></script>
+    <script>
+        function geriDon(modelListesi) {
+            console.log("Gönderilen Veri:", modelListesi);
+
+            fetch("/Home/GeriDon", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(modelListesi)
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error("Sunucu hatası");
+                    return response.json();
+                })
+                .then(data => {
+                    // 1. Başarılı SweetAlert gösterimi
+                    Swal.fire({
+                        title: 'Başarılı!',
+                        text: 'Kayıtlar başarıyla geri yüklendi.',
+                        icon: 'success',
+                        confirmButtonText: 'Tamam',
+                        timer: 2000, // 2 saniye sonra otomatik kapanabilir
+                        timerProgressBar: true
+                    }).then((result) => {
+                        const modalElement = parent.document.getElementById('pageModal');
+
+                        if (modalElement) {
+                            const modalInstance = parent.bootstrap.Modal.getInstance(modalElement);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            }
+                        }
+
+                        parent.location.reload();
+                    });
+                })
+                .catch(error => {
+                    console.error("Hata:", error);
+                    Swal.fire({
+                        title: 'Hata!',
+                        text: 'İşlem sırasında bir sorun oluştu.',
+                        icon: 'error',
+                        confirmButtonText: 'Kapat'
+                    });
+                });
+        }
+        </script>
+</body>
+</html>

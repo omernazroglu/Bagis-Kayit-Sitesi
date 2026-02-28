@@ -1,0 +1,472 @@
+﻿@model BagislarViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orders</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <link rel="stylesheet" href="~/css/bagislar.css" asp-append-version="true" />
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11">
+    </script>
+    <!-- Bootstrap CSS -->
+
+    <!-- Bootstrap JS Bundle (Popper dahil) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+
+    <div class="page-header">
+        <h1 class="page-title">Kurban Bağışları</h1>
+    </div>
+   
+
+    <div class="card">
+
+
+        <div class="toolbar">
+            <div class="search-box">
+                <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+                <input type="text" placeholder="Bağış Ara" />
+            </div>
+
+            <div class="filter-container">
+                <button class="filter-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="14" y2="12" /><line x1="4" y1="18" x2="10" y2="18" /></svg>
+                    More filters
+                </button>
+                <div class="more-filters-panel" id="filterPanel" style="display: none;">
+                    <div class="filter-panel-header">
+                        <span class="filter-panel-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="14" y2="12" /><line x1="4" y1="18" x2="10" y2="18" /></svg>
+                            Filtreler
+                        </span>
+                        <button class="filter-panel-close" id="filterPanelClose">&times;</button>
+                    </div>
+                    <div class="filters-grid">
+                        <div class="filter-group">
+                            <label>Bağış Türü</label>
+                            <select class="filter-select" data-col="3">
+                                <option value="">Hepsi</option>
+                                <option value="AKİKA">AKİKA</option>
+                                <option value="ADAK">ADAK</option>
+                                <option value="VACİP">VACİP</option>
+                                <option value="MERHUM">MERHUM</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Bağış Durumu</label>
+                            <select class="filter-select" data-col="5">
+                                <option value="">Hepsi</option>
+                                <option value="Alınmadı">Alınmadı</option>
+                                <option value="Referans'ta">Referans'ta</option>
+                                <option value="Dernekte">Dernekte</option>
+                                <option value="Teslim Edildi">Teslim Edildi</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>SMS Durumu</label>
+                            <select class="filter-select" data-col="6">
+                                <option value="">Hepsi</option>
+                                <option value="Gönderildi">Gönderildi</option>
+                                <option value="Gönderilmedi">Gönderilmedi</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Telefon</label>
+                            <input type="text" class="filter-input" data-col="2" placeholder="Ara...">
+                        </div>
+                        <div class="filter-group">
+                            <label>Referans</label>
+                            <input type="text" class="filter-input" data-col="7" placeholder="İsim ara...">
+                        </div>
+                    </div>
+                    <button class="clear-filters" id="clearFilters">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+                        Filtreleri Sıfırla
+                    </button>
+                </div>
+            </div>
+            <div class="spacer"></div>
+            <button class="btn-stats" id="toggleStats" style="background: #6366f1; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500; margin-right: 10px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 20V10M12 20V4M6 20v-6" />
+                </svg>
+                İstatistikleri Gör
+            </button>
+            <button class="btn-export" id="export">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                Export
+            </button>
+
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrap">
+            <table id="myTable">
+                <thead>
+                    <tr>
+                        <th class="no-export"><input type="checkbox" /></th>
+                        <th> Bağış No</th>
+                        @foreach (var sutun in Model.RefSutunlar)
+                        {
+                            <th>@sutun.Aciklama<span class="sort-icon"></span></th>
+                        }
+                        <th class="no-export"  style="text-align:center;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var sayac = 1;
+                    }
+                    @foreach (var item in Model.BagisBilgileris.GroupBy(x => x.BagislarId).Select(g => g.First()))
+                    {
+                        <tr class="row">
+                            <td><input type="checkbox" /></td>
+                            <td>@sayac</td>
+                            @{
+                                sayac++;
+                            }
+
+                            @foreach (var b in Model.RefSutunlar)
+                            {
+                                var aItem = Model.BagisBilgileris.FirstOrDefault(x => x.BagislarId == item.BagislarId && x.SutunlarId == b.Id);
+                                var val = aItem?.Aciklama ?? "";
+
+                                <td class="editable-cell" tabindex="0" data-column-id="@b.Id" data-record-id="@(item?.BagislarId ?? 0)">
+                                    @if (b.Id == 3)
+                                    {
+                                        var list = new List<string> { "VACİP", "MERHUM", "AKİKA", "ADAK" };
+
+
+                                        <select class="styled-select">
+
+                                            <option selected>
+                                                @(string.IsNullOrWhiteSpace(val) ? "Seçiniz" : val)
+                                            </option>
+
+                                            @foreach (var itemTur in list)
+                                            {
+                                                if (itemTur != val)
+                                                {
+                                                    <option>@itemTur</option>
+                                                }
+                                            }
+
+                                        </select>
+
+
+                                    }
+                                    else if (b.Id == 5)
+                                    {
+
+                                        var valselect =
+                                        val == "4" ? "Teslim Edildi" :
+                                        val == "3" ? "Dernekte" :
+                                        val == "2" ? "Referans'ta" :
+                                        "Alınmadı";
+
+                                        var badgeClass =
+                                        valselect == "Teslim Edildi" ? "badge-pickup" :
+                                        valselect == "Dernekte" ? "badge-in-progress" :
+                                        valselect == "Referans'ta" ? "badge-pending" :
+                                        "badge-cancelled";
+
+                                        <div class="status-wrapper">
+                                            <span class="badge @badgeClass">
+                                                <span class="badge-dot"></span>
+                                                @(string.IsNullOrEmpty(valselect) ? "Alınmadı" : valselect)
+                                            </span>
+
+                                            <select class="status-select">
+                                                <option value="Alınmadı">Alınmadı</option>
+                                                <option value="Referans'ta">Referans'ta</option>
+                                                <option value="Dernekte">Dernekte</option>
+                                                <option value="Teslim Edildi">Teslim Edildi</option>
+                                            </select>
+                                        </div>
+                                    }
+
+                                    else if (b.Id == 6)
+                                    {
+                                        var badgeClass = val == "1"
+                                        ? "badge-fulfilled"
+                                        : "badge-failed";
+
+                                        <div class="status-wrapper">
+                                            <span class="badge @badgeClass">
+                                                <span class="badge-dot"></span>
+                                                @(val == "1" ? "Gönderildi" : "Gönderilmedi")
+                                            </span>
+
+                                            <select class="status-select">
+                                                <option value="Gönderilmedi">Gönderilmedi</option>
+                                                <option value="Gönderildi">Gönderildi</option>
+                                            </select>
+                                        </div>
+                                    }
+
+                                    else
+                                    {
+                                        <span class="cell-value">
+                                            @(aItem?.Aciklama ?? "")
+                                        </span>
+                                    }
+                                </td>
+                            }
+
+                            <td style="text-align:center;">
+                                <div class="custom-dropdown">
+                                    <button type="button" class="dropbtn" onclick="toggleDropdown(event, this)">
+                                        İşlemler <span class="arrow">▾</span>
+                                    </button>
+                                    <div class="dropdown-content">
+                                        <a href="javascript:void(0)" onclick="getLogs(@(item?.BagislarId ?? 0))">
+                                            📜 Geçmiş Kayıtları Göster
+                                        </a>
+                                        <div class="divider"></div>
+                                        <a href="javascript:void(0)" class="delete-item" onclick="satirSil(@(item?.BagislarId ?? 0))">
+                                            🗑 Sil
+                                        </a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+
+                    <tr>
+                        <td colspan="@(Model.RefSutunlar.Count() + 3)" style="padding:20px; text-align:center;">
+                            <button id="addRowBtn" class="btn-primary">
+                                + Yeni Bağış Ekle
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+  
+    </div>
+
+    <div id="statsOffcanvas" class="offcanvas">
+        <div class="offcanvas-header">
+            <h2>Bağış İstatistikleri</h2>
+            <button class="close-btn" id="closeStats">&times;</button>
+        </div>
+        <div class="offcanvas-body">
+            @{
+                var allData = Model.BagisBilgileris;
+                var totalCount = allData.GroupBy(x => x.BagislarId).Count();
+
+                // SMS Oranı (SutunId: 6)
+                var smsGonderildi = allData.Count(x => x.SutunlarId == 6 && x.Aciklama == "1");
+                double smsOran = totalCount > 0 ? (double)smsGonderildi / totalCount * 100 : 0;
+
+                // Bağış Durumları (SutunId: 5)
+                var durumGruplari = allData.Where(x => x.SutunlarId == 5).GroupBy(x => x.Aciklama).ToDictionary(g => g.Key, g => g.Count());
+                int d0 = durumGruplari.GetValueOrDefault("Alınmadı", 0) + durumGruplari.GetValueOrDefault("1", 0);
+                int d1 = durumGruplari.GetValueOrDefault("Referans'ta", 0) + durumGruplari.GetValueOrDefault("2", 0);
+                int d2 = durumGruplari.GetValueOrDefault("Dernekte", 0) + durumGruplari.GetValueOrDefault("3", 0);
+                int d3 = durumGruplari.GetValueOrDefault("Teslim Edildi", 0) + durumGruplari.GetValueOrDefault("4", 0);
+                int durumToplam = d0 + d1 + d2 + d3;
+
+                // Referanslar (SutunId: 7)
+                var referansListesi = allData.Where(x => x.SutunlarId == 7 && !string.IsNullOrEmpty(x.Aciklama))
+                .GroupBy(x => x.Aciklama)
+                .OrderByDescending(g => g.Count())
+                .Take(5);
+            }
+
+            <div class="stat-section">
+                <div class="stat-card primary">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-content">
+                        <label>Sistemdeki Toplam</label>
+                        <div class="value">@totalCount <small>Bağış</small></div>
+                    </div>
+                </div>
+
+                <div class="section-title">SMS Bilgilendirme Durumu</div>
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span>Başarı: %@smsOran.ToString("0")</span>
+                        <span>@smsGonderildi / @totalCount</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: @smsOran.ToString("0")%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-section">
+                <div class="section-title">Bağış Durum Analizi</div>
+                <div class="status-grid-detailed">
+                    <div class="status-mini-card pending">
+                        <span class="status-dot"></span>
+                        <div class="status-info"><label>Alınmadı</label><strong>@d0</strong></div>
+                    </div>
+                    <div class="status-mini-card reference">
+                        <span class="status-dot"></span>
+                        <div class="status-info"><label>Referans'ta</label><strong>@d1</strong></div>
+                    </div>
+                    <div class="status-mini-card association">
+                        <span class="status-dot"></span>
+                        <div class="status-info"><label>Dernekte</label><strong>@d2</strong></div>
+                    </div>
+                    <div class="status-mini-card delivered">
+                        <span class="status-dot"></span>
+                        <div class="status-info"><label>Teslim</label><strong>@d3</strong></div>
+                    </div>
+                </div>
+                <div class="distribution-bar">
+                    @if (durumToplam > 0)
+                    {
+                        <div class="dist-segment p-bg" style="width: @((double)d0/durumToplam*100)%"></div>
+                        <div class="dist-segment r-bg" style="width: @((double)d1/durumToplam*100)%"></div>
+                        <div class="dist-segment a-bg" style="width: @((double)d2/durumToplam*100)%"></div>
+                        <div class="dist-segment d-bg" style="width: @((double)d3/durumToplam*100)%"></div>
+                    }
+                </div>
+            </div>
+
+            <div class="stat-section">
+                <div class="section-title">En Çok Bağış Getiren Referanslar</div>
+                <div class="rank-list">
+                    @foreach (var refItem in referansListesi)
+                    {
+                        <div class="rank-item">
+                            <div class="rank-name">
+                                <span class="dot"></span>
+                                @refItem.Key
+                            </div>
+                            <div class="rank-count">@refItem.Count() Bağış</div>
+                        </div>
+                    }
+                    @if (!referansListesi.Any())
+                    {
+                        <div style="font-size:12px; color:#94a3b8; padding:10px;">Henüz referans verisi bulunamadı.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="pageModal">
+        <div class="modal-header">
+            <h5 class="modal-title">Detay Sayfası</h5>
+            <button type="button" class="btn-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <iframe id="modalIframe" src=""></iframe>
+        </div>
+    </div>
+    <div id="overlay" class="overlay"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="~/js/bagislar.js" asp-append-version="true"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script>
+        document.getElementById("export").addEventListener("click", function () {
+            var table = document.getElementById("myTable");
+            if (!table) { alert("Tablo bulunamadı!"); return; }
+
+            // Yeni geçici tablo oluştur
+            var tempTable = document.createElement("table");
+
+            // thead kopyala (sadece export edilecek sütunlar)
+            var thead = table.querySelector("thead");
+            var newThead = tempTable.createTHead();
+            var trHead = newThead.insertRow();
+            thead.querySelectorAll("th").forEach(function (th, index) {
+                if (!th.classList.contains("no-export")) {
+                    var newTh = trHead.insertCell();
+                    newTh.innerText = th.innerText;
+                }
+            });
+
+            // tbody kopyala
+            var tbody = table.querySelector("tbody");
+            var newTbody = tempTable.createTBody();
+            tbody.querySelectorAll("tr").forEach(function (tr) {
+                var newTr = newTbody.insertRow();
+                tr.querySelectorAll("td").forEach(function (td, index) {
+                    if (!table.querySelectorAll("th")[index].classList.contains("no-export")) {
+                        var newTd = newTr.insertCell();
+                        newTd.innerText = td.innerText;
+                    }
+                });
+            });
+
+            // Excel oluştur ve indir
+            var wb = XLSX.utils.table_to_book(tempTable, { sheet: "Sayfa1" });
+            XLSX.writeFile(wb, "Tablo.xlsx");
+        });;
+    </script>
+    <script>
+        function getLogs(id) {
+            const modal = document.getElementById('pageModal');
+            const iframe = document.getElementById('modalIframe');
+            const header = modal.querySelector('.modal-header');
+
+            iframe.src = `/Home/GetLogs?id=${id}`;
+            modal.classList.add('active');
+
+            // iframe yüklenince yüksekliği zorla
+            iframe.onload = function () {
+                const availableHeight = modal.clientHeight - header.offsetHeight;
+                iframe.style.height = availableHeight + 'px';
+            };
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('pageModal');
+            const iframe = document.getElementById('modalIframe');
+            modal.classList.remove('active');
+            iframe.src = "";
+            iframe.style.height = ""; // sıfırla
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === "Escape") {
+                closeModal();
+            }
+        });
+    </script>
+    <script>
+        function toggleDropdown(event, btn) {
+            // Tıklamanın diğer elementlere yayılmasını engelle
+            event.stopPropagation();
+
+            // Önce varsa diğer açık menüleri kapat
+            closeAllDropdowns();
+
+            // Tıklanan butonun yanındaki menüyü aç/kapat
+            const content = btn.nextElementSibling;
+            content.classList.toggle("show-menu");
+        }
+
+        // Menü dışına veya başka yere tıklandığında kapanması için
+        window.onclick = function (event) {
+            if (!event.target.matches('.dropbtn')) {
+                closeAllDropdowns();
+            }
+        }
+
+        function closeAllDropdowns() {
+            const dropdowns = document.getElementsByClassName("dropdown-content");
+            for (let i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].classList.remove("show-menu");
+            }
+        }
+    </script>
+</body>
+</html>
+
+
