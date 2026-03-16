@@ -13,8 +13,9 @@ namespace UFUKDER_BAGIS.Controllers
         private readonly IService<RefSutunlar> _refsutunlar;
         private readonly IService<BagisBilgileri> _bagisbilgileri;
         private readonly IService<Referanslar> _referanslar;
+        private readonly IService<BagisGrup> _gruplar;
         private readonly IUnitOfWork _unitOfWork;
-        public HomeController(ILogger<HomeController> logger, IService<Bagislar> bagislar, IService<RefSutunlar> refsutunlar, IService<BagisBilgileri> bagisbilgileri, IService<Referanslar> referanslar, IUnitOfWork unitOfWork)
+        public HomeController(ILogger<HomeController> logger, IService<Bagislar> bagislar, IService<RefSutunlar> refsutunlar, IService<BagisBilgileri> bagisbilgileri, IService<Referanslar> referanslar, IUnitOfWork unitOfWork, IService<BagisGrup> gruplar)
         {
             _logger = logger;
             _bagislar = bagislar;
@@ -22,6 +23,7 @@ namespace UFUKDER_BAGIS.Controllers
             _bagisbilgileri = bagisbilgileri;
             _referanslar = referanslar;
             _unitOfWork = unitOfWork;
+            _gruplar = gruplar;
         }
         public IActionResult Index()
         {
@@ -39,17 +41,19 @@ namespace UFUKDER_BAGIS.Controllers
             var resultbagislar = await _bagislar.GetListAsync(p => p.Aktif == 1);
 
             var bagislarids = resultbagislar.List.Select(x => x.Id).ToList();
-            var resultbagis = await _bagisbilgileri.GetListAsync(p=>bagislarids.Contains((int)p.BagislarId));
-
-            if (!resultbagis.IsSuccess)
+            var resultbagisBilgileri = await _bagisbilgileri.GetListAsync(p=>bagislarids.Contains((int)p.BagislarId));
+            var resultBagis = await _bagislar.GetListAsync(p => bagislarids.Contains(p.Id));
+            if (!resultbagisBilgileri.IsSuccess)
             {
                 return Json("dflndfb");
 
             }
             var model = new BagislarViewModel
             {
-                BagisBilgileris = resultbagis.List.ToList(),
+                BagisBilgileris = resultbagisBilgileri.List.ToList(),
                 RefSutunlar = result.List.ToList(),
+                bagislars=resultBagis.List.ToList(),
+
             };
             return View(model);
         }   
@@ -346,6 +350,54 @@ namespace UFUKDER_BAGIS.Controllers
             public int BagislarId { get; set; }
         }
 
+        public class GruplaRequest
+        {
+            public List<int> BagisIds { get; set; }
+            public int GrupNo { get; set; }
+        }
 
+        [HttpPost]
+        public async Task<IActionResult> Grupla([FromBody] GruplaRequest request)
+        {
+            var ids = request.BagisIds;   // Seçilen BagisId'ler
+            var grupNo = request.GrupNo;  // Girilen grup numarasý
+
+            //var resultGruplar = await _gruplar.GetListAsync(p=>ids.Contains(p.BagislarId.Value)&& p.);
+
+            foreach (var id in ids)
+            {
+                var model = new BagisGrup
+                {
+                    BagislarId = id,
+                    GrupNo = grupNo
+                };
+                var resultGrupInsert = await _gruplar.InsertAsync(model);
+
+            }
+            return Json(new { success = true, count = ids.Count, grupNo = grupNo });
+        }
+
+        public async Task<IActionResult> GrupGoruntule()
+        {
+            var model = new List<Bagisci>();
+            var resultGrup = await _gruplar.GetListAsync();
+            var bagislarids = resultGrup.List.Select(x => x.BagislarId).ToList();
+
+            var resultBagisBilgileri = await _bagisbilgileri.GetListAsync(p => bagislarids.Contains(p.BagislarId)&& (p.SutunlarId==1 || p.SutunlarId==2));
+            foreach(var item in resultBagisBilgileri.List.OrderBy(p=>p.BagislarId))
+            {
+
+
+                var bagisciModel = new Bagisci
+                {
+                    AdSoyad = item.SutunlarId == 1 ? item.Aciklama : null,  // 1 -> AdSoyad
+                    Telefon = item.SutunlarId == 2 ? item.Aciklama : null,   // 3 -> Telefon
+                    GrupNo = resultGrup.List.FirstOrDefault(g => g.BagislarId == item.BagislarId)?.GrupNo ?? 0
+                };
+                model.Add(bagisciModel);
+            }
+            
+            return View(model);
+        }
     }
 }

@@ -105,7 +105,12 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                 Export
             </button>
-
+            <button class="btn-export" id="smsExcel">
+                SMS Excel Oluştur
+            </button>
+            <button id="groupBtn" class="btn-primary">
+                Grupla
+            </button>
         </div>
 
         <!-- TABLE -->
@@ -119,6 +124,7 @@
                         {
                             <th>@sutun.Aciklama<span class="sort-icon"></span></th>
                         }
+                        <th>Oluşturulma Tarihi</th>
                         <th class="no-export"  style="text-align:center;">İşlemler</th>
                     </tr>
                 </thead>
@@ -128,8 +134,12 @@
                     }
                     @foreach (var item in Model.BagisBilgileris.GroupBy(x => x.BagislarId).Select(g => g.First()))
                     {
+                        var tarihItem = Model.bagislars.FirstOrDefault(x => x.Id == item.BagislarId);
+
                         <tr class="row">
-                            <td><input type="checkbox" /></td>
+                            <td>
+                                <input type="checkbox" class="row-check" value="@item.BagislarId" />
+                            </td>
                             <td>@sayac</td>
                             @{
                                 sayac++;
@@ -221,6 +231,7 @@
                                     }
                                 </td>
                             }
+                            <td>@tarihItem.OlusturmaTarihi</td>
 
                             <td style="text-align:center;">
                                 <div class="custom-dropdown">
@@ -396,10 +407,19 @@
             var newTbody = tempTable.createTBody();
             tbody.querySelectorAll("tr").forEach(function (tr) {
                 var newTr = newTbody.insertRow();
+
                 tr.querySelectorAll("td").forEach(function (td, index) {
                     if (!table.querySelectorAll("th")[index].classList.contains("no-export")) {
+
                         var newTd = newTr.insertCell();
-                        newTd.innerText = td.innerText;
+
+                        var select = td.querySelector("select");
+
+                        if (select) {
+                            newTd.innerText = select.options[select.selectedIndex].text;
+                        } else {
+                            newTd.innerText = td.innerText.trim();
+                        }
                     }
                 });
             });
@@ -465,7 +485,108 @@
                 dropdowns[i].classList.remove("show-menu");
             }
         }
+        document.getElementById("smsExcel").addEventListener("click", function () {
+
+            let bagisUcreti = prompt("Bağış ücretini giriniz (örn: 1.750,00)");
+            if (!bagisUcreti) return;
+
+            var table = document.getElementById("myTable");
+            var wb = XLSX.utils.book_new();
+            var data = [];
+
+            // Başlık
+            data.push(["İsim Soyisim", "Telefon", "Mesaj"]);
+
+            table.querySelectorAll("tbody tr").forEach(function (tr) {
+
+                var tds = tr.querySelectorAll("td");
+                if (tds.length < 4) return;
+
+                var isim = tds[2].innerText.trim(); // 2. sütun (0 indexli, 1)
+                var telefon = tds[3].innerText.trim(); // 3. sütun (0 indexli, 2)
+
+                var turSelect = tds[4].querySelector("select"); // 4. sütun dropdown
+                var tur = turSelect ? turSelect.value : "";
+
+                var tarihText = tds[9].innerText.trim(); // 9. sütun
+                var tarih = "";
+                if (tarihText) {
+                    // Tarih metnini sadece gün.ay.yıl olacak şekilde alıyoruz
+                    // Örn: "19.02.2026 00:02:26" -> "19.02.2026"
+                    tarih = tarihText.split(" ")[0];
+                }
+                if (!isim || !telefon) return;
+
+                var mesaj = `Sayın ${isim}, ${bagisUcreti}TL KURBAN ${tur} bağışınız ${tarih} tarihinde alınmıştır. Teşekkür ederiz`;
+
+
+                data.push([isim, telefon, mesaj]);
+
+            });
+
+            var ws = XLSX.utils.aoa_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws, "SMS");
+
+            XLSX.writeFile(wb, "sms_listesi.xlsx");
+
+        });
+        document.getElementById("groupBtn").addEventListener("click", function () {
+
+            // Önce seçilen BagisId'leri al
+            let ids = [];
+            document.querySelectorAll(".row-check:checked").forEach(function (checkbox) {
+                let row = checkbox.closest("tr");
+                let cell = row.querySelector(".editable-cell");
+                let id = cell.getAttribute("data-record-id");
+                if (id) ids.push(parseInt(id));
+            });
+
+            if (ids.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Uyarı',
+                    text: 'Lütfen en az bir bağış seçin!'
+                });
+                return;
+            }
+
+            // SweetAlert ile Grup No sor
+            Swal.fire({
+                title: 'Grup No Giriniz',
+                input: 'text',
+                inputPlaceholder: 'Grup numarası',
+                showCancelButton: true,
+                confirmButtonText: 'Gönder',
+                cancelButtonText: 'İptal',
+                inputValidator: (value) => {
+                    if (!value) return 'Lütfen bir grup numarası girin!';
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const grupNo = result.value;
+
+                    // Controller'a gönder
+                    fetch("/Home/Grupla", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ BagisIds: ids, GrupNo: grupNo })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Başarılı',
+                                text: 'Seçilen bağışlar gruplandı!'
+                            });
+                            console.log("Controller'dan gelen:", data);
+                        });
+                }
+            });
+        });
     </script>
+
 </body>
 </html>
 

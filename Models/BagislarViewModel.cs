@@ -6,5 +6,7 @@
 
         public List<BagisBilgileri> BagisBilgileris { get; set; }
 
+
+        public List<Bagislar> bagislars { get; set; }
     }
 }
